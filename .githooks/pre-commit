@@ -1,9 +1,10 @@
 #!/bin/sh
-set -e
 
 staged=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ml|mli)$' | grep -v '^_build/' || true)
-if [ -n "$staged" ]; then
-  echo "Formatting..."
+if [ -z "$staged" ]; then exit 0; fi
+
+if ! echo "$staged" | xargs ocamlformat --check 2>/dev/null; then
   echo "$staged" | xargs ocamlformat --inplace
-  echo "$staged" | xargs git add
+  echo "Reformatted files — review changes and re-stage before committing."
+  exit 1
 fi
