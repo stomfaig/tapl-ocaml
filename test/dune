@@ -1,0 +1,4 @@
+(tests
+ (names test_eval test_typing test_parse)
+ (libraries tapl alcotest)
+ (flags (:standard -w -26-27-32-33-34-37-39)))

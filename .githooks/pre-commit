@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+
+staged=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ml|mli)$' | grep -v '^_build/' || true)
+if [ -n "$staged" ]; then
+  echo "Formatting..."
+  echo "$staged" | xargs ocamlformat --inplace
+  echo "$staged" | xargs git add
+fi
