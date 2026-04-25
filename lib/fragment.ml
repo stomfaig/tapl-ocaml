@@ -1,14 +1,14 @@
 (** Core signatures and functors for the extensible language framework.
 
-    Languages are built by combining {!FRAGMENT} modules via {!Combine}.
-    Each fragment contributes a set of term constructors, an evaluator,
-    a parser, and a pretty-printer. Typed fragments additionally supply
-    a type-checking function. *)
+    Languages are built by combining {!FRAGMENT} modules via {!Combine}. Each
+    fragment contributes a set of term constructors, an evaluator, a parser, and
+    a pretty-printer. Typed fragments additionally supply a type-checking
+    function. *)
 
 (** Composable language fragment
 
-    The type parameter ['a] is where the actual constructed
-    type is to be injected. *)
+    The type parameter ['a] is where the actual constructed type is to be
+    injected. *)
 module type FRAGMENT = sig
   type 'a node
   (** The node type for this fragment. *)
@@ -24,18 +24,18 @@ module type FRAGMENT = sig
       - [inject] wraps a 'a node back into 'a.
       - [project] try to project a 'a to 'a node.
       - [full_eval] evaluates an arbitrary combined sub-term to normal form.
-      - [full_map] applies a function to all immediate sub-terms of a combined term of
-        any other fragment type (used for traversals which must cross fragment boundaries). *)
+      - [full_map] applies a function to all immediate sub-terms of a combined
+        term of any other fragment type (used for traversals which must cross
+        fragment boundaries). *)
 
   val parse :
     inject:('a node -> 'a) ->
     p:Input.t ->
     full_parser:(Input.t -> 'a option) ->
     'a option
-  (** Parse a term from the input stream. Must use prefix notation
-      (op_name) (arg1) ..., and op_name should not prefix any other
-      op_name in the the same or any other fragments that are 
-      being constructed.
+  (** Parse a term from the input stream. Must use prefix notation (op_name)
+      (arg1) ..., and op_name should not prefix any other op_name in the the
+      same or any other fragments that are being constructed.
       - [inject] wraps a parsed node into the combined term type.
       - [full_parser] parses an arbitrary combined sub-term. *)
 
@@ -43,14 +43,14 @@ module type FRAGMENT = sig
   (** Pretty-print a node. [full_pp] prints an arbitrary sub-term. *)
 
   val fmap : f:('a -> 'a) -> 'a node -> 'a node
-  (** The functor map: apply [f] to every immediate ['a]-typed child,
-      leaving the node constructor unchanged.
-      Witnesses that ['a node] is a functor in ['a]. *)
+  (** The functor map: apply [f] to every immediate ['a]-typed child, leaving
+      the node constructor unchanged. Witnesses that ['a node] is a functor in
+      ['a]. *)
 end
 
-(** A fragment that additionally provides a type-checking function.
-    Extends {!FRAGMENT} with a type representation ['b ty] and
-    a [get_type] that assigns types to terms in the open-recursive style. *)
+(** A fragment that additionally provides a type-checking function. Extends
+    {!FRAGMENT} with a type representation ['b ty] and a [get_type] that assigns
+    types to terms in the open-recursive style. *)
 module type TYPED_FRAGMENT = sig
   include FRAGMENT
 
@@ -75,10 +75,10 @@ end
 
 (** Combine two fragments into a single language.
 
-    The combined term type is [L of term F1.node | R of term F2.node],
-    which is the fixed point of the coproduct functor [F1.node + F2.node].
-    [eval], [parse], and [pp] are closed by threading the combined
-    term type back through inject/project/full_eval. *)
+    The combined term type is [L of term F1.node | R of term F2.node], which is
+    the fixed point of the coproduct functor [F1.node + F2.node]. [eval],
+    [parse], and [pp] are closed by threading the combined term type back
+    through inject/project/full_eval. *)
 module Combine (F1 : FRAGMENT) (F2 : FRAGMENT) = struct
   type term = L of term F1.node | R of term F2.node
 
@@ -103,9 +103,8 @@ module Combine (F1 : FRAGMENT) (F2 : FRAGMENT) = struct
           ~full_map:(fun f -> fmap ~f)
           n
 
-  (** Parse a combined term; tries [F1] first, then [F2].
-    This should not cause issues, since we assume that Each
-    fragment uses prefix notation. *)
+  (** Parse a combined term; tries [F1] first, then [F2]. This should not cause
+      issues, since we assume that Each fragment uses prefix notation. *)
   let rec parse p =
     Input.skip_ws p;
     match F1.parse ~inject:inject_l ~p ~full_parser:parse with
@@ -123,8 +122,8 @@ end
 
 (** Combine two typed fragments, merging their type systems.
 
-    The combined type is [TL of ty F1.ty | TR of ty F2.ty], mirroring
-    the [L]/[R] split of the term type. *)
+    The combined type is [TL of ty F1.ty | TR of ty F2.ty], mirroring the
+    [L]/[R] split of the term type. *)
 module TypedCombine (F1 : TYPED_FRAGMENT) (F2 : TYPED_FRAGMENT) = struct
   include Combine (F1) (F2)
 
@@ -135,8 +134,8 @@ module TypedCombine (F1 : TYPED_FRAGMENT) (F2 : TYPED_FRAGMENT) = struct
   let project_ty_l = function TL t -> Some t | _ -> None
   let project_ty_r = function TR t -> Some t | _ -> None
 
-  (** Infer the type of a combined term. Raises [Failure] if a sub-term
-      is ill-typed; callers should catch if partial type information is needed. *)
+  (** Infer the type of a combined term. Raises [Failure] if a sub-term is
+      ill-typed; callers should catch if partial type information is needed. *)
   let rec get_type term =
     let full_get_type t =
       match get_type t with

@@ -17,7 +17,7 @@ jobs:
           ocaml-compiler: "5"
 
       - name: Install dependencies
-        run: opam install alcotest ocamlformat.0.25.1 --yes
+        run: opam install alcotest ocamlformat --yes
 
       - name: Format check
         run: opam exec -- dune build @fmt
