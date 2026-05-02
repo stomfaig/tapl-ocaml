@@ -4,6 +4,8 @@ module BN =
 module LB =
   Fragment.Combine (Bool_fragment.BoolFragment) (Fn_fragment.FnFragment)
 
+module BNIsZero = Bn_iszero.BnIsZero
+
 let term (type a) pp =
   Alcotest.testable (fun ppf t -> Format.pp_print_string ppf (pp t)) ( = )
 
@@ -41,6 +43,23 @@ let check_lb name input expected =
   Alcotest.test_case name `Quick (fun () ->
       Alcotest.check lb_term name expected (LB.eval (lb input)))
 
+let bniz_term = term BNIsZero.pp
+
+let bniz s =
+  match BNIsZero.parse (Input.from_string s) with
+  | Some t -> t
+  | None -> Alcotest.failf "parse error: %s" s
+
+let bnizz = BNIsZero.BN.L Nat_fragment.NatFragment.Zero
+let bnizs n = BNIsZero.BN.L (Nat_fragment.NatFragment.Succ n)
+let bnizt = BNIsZero.BN.R Bool_fragment.BoolFragment.True
+let bnizf = BNIsZero.BN.R Bool_fragment.BoolFragment.False
+let bniziz n = BNIsZero.IsZero n
+
+let check_bniz name input expected =
+  Alcotest.test_case name `Quick (fun () ->
+      Alcotest.check bniz_term name expected (BNIsZero.eval (bniz input)))
+
 let () =
   Alcotest.run "eval"
     [
@@ -65,6 +84,18 @@ let () =
           check_bn "succ pred succ" "succ pred succ zero" (succ zero);
           check_bn "if nat branches" "if true then succ zero else zero"
             (succ zero);
+        ] );
+      ( "bniz",
+        [
+          check_bniz "zero is a value" "zero" (bniz "zero");
+          check_bniz "true is a value" "true" (bniz "true");
+          check_bniz "false is a value" "false" (bniz "false");
+          check_bniz "iszero zero" "iszero zero" (bniz "true");
+          check_bniz "iszero succ zero" "iszero succ zero" (bniz "false");
+          check_bniz "iszero succ succ zero" "iszero succ succ zero"
+            (bniz "false");
+          check_bniz "iszero pred succ zero" "iszero pred succ zero"
+            (bniz "true");
         ] );
       ( "lambda",
         [
