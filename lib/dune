@@ -1,6 +1,13 @@
 (library
  (name tapl)
  (wrapped false)
- (modules fragment bool_fragment nat_fragment fn_fragment input context)
+ (modules
+  fragment
+  bool_fragment
+  nat_fragment
+  bn_iszero
+  fn_fragment
+  input
+  context)
  (ocamlopt_flags
   (:standard -w -26-27-32-33-34-37-39)))

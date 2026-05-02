@@ -73,6 +73,71 @@ module type TYPED_FRAGMENT = sig
   (** Pretty-print a type tag. *)
 end
 
+(* todo: we would like to explicitly annotate this with FRAGMENT
+  but also expose the L and R type constructors *)
+
+(** Combine two fragments into a new fragment
+
+    The tricky bit here is that the combined fragments must see the final type
+    as their direct ancestor. E.g., consider the sum (Nat + Bool) + Fn. In this
+    case, if Bool would see Nat + Bool as it direct ancestor, then we could not
+    parse / evaluate things like `if true then (Abs ...) else (Abs ...)` since
+    Bool terms could only parse Nat + Bool subterms.
+
+    Therefore, {!F1} and {!F2} are "tricked into thinking" that their direct
+    ancestor is 'a. *)
+module UntiedCombine (F1 : FRAGMENT) (F2 : FRAGMENT) = struct
+  type 'a node = L of 'a F1.node | R of 'a F2.node
+
+  let local_inject_l n = L n
+  let local_inject_r n = R n
+  let local_project_l = function L n -> Some n | _ -> None
+  let local_project_r = function R n -> Some n | _ -> None
+
+  let fmap ~f = function
+    | L f1_node -> local_inject_l (F1.fmap ~f f1_node)
+    | R f2_node -> local_inject_r (F2.fmap ~f f2_node)
+
+  let eval ~inject ~project ~full_eval ~full_map node =
+    let inject_l n = inject (local_inject_l n) in
+    let inject_r n = inject (local_inject_r n) in
+    let project_l n =
+      match project n with Some ln -> local_project_l ln | _ -> None
+    in
+    let project_r n =
+      match project n with Some ln -> local_project_r ln | _ -> None
+    in
+    match node with
+    | L f1_node ->
+        F1.eval ~inject:inject_l ~project:project_l ~full_eval ~full_map f1_node
+    | R f2_node ->
+        F2.eval ~inject:inject_r ~project:project_r ~full_eval ~full_map f2_node
+
+  let rec parse ~inject ~p ~full_parser =
+    let inject_l n = inject (local_inject_l n) in
+    let inject_r n = inject (local_inject_r n) in
+    let local_full_parser p = parse ~inject ~p ~full_parser in
+    match F1.parse ~inject:inject_l ~p ~full_parser:local_full_parser with
+    | Some _ as term -> term
+    | None -> (
+        match F2.parse ~inject:inject_r ~p ~full_parser:local_full_parser with
+        | Some _ as term -> term
+        | _ -> None)
+
+  let pp ~full_pp = function L n -> F1.pp ~full_pp n | R n -> F2.pp ~full_pp n
+end
+
+module type LANGUAGE = sig
+  type term
+
+  val parse : Input.t -> term option
+  val eval : term -> term
+  val pp : term -> string
+end
+
+(** Seal any module satisfying {!LANGUAGE} behind the abstract interface. *)
+module Seal (L : LANGUAGE) : LANGUAGE = L
+
 (** Combine two fragments into a single language.
 
     The combined term type is [L of term F1.node | R of term F2.node], which is

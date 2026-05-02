@@ -4,8 +4,11 @@ module BN =
 module LB =
   Fragment.Combine (Bool_fragment.BoolFragment) (Fn_fragment.FnFragment)
 
+module BNIsZero = Bn_iszero.BnIsZero
+
 let parse_bn s = BN.parse (Input.from_string s)
 let parse_lb s = LB.parse (Input.from_string s)
+let parse_bniz s = BNIsZero.parse (Input.from_string s)
 let opt_str = Alcotest.(option string)
 
 (* Round-trip: parse then pp *)
@@ -19,6 +22,11 @@ let rt_lb name input expected_pp =
       let result = Option.map LB.pp (parse_lb input) in
       Alcotest.check opt_str name (Some expected_pp) result)
 
+let rt_bniz name input expected_pp =
+  Alcotest.test_case name `Quick (fun () ->
+      let result = Option.map BNIsZero.pp (parse_bniz input) in
+      Alcotest.check opt_str name (Some expected_pp) result)
+
 let fails_bn name input =
   Alcotest.test_case name `Quick (fun () ->
       Alcotest.check opt_str name None (Option.map BN.pp (parse_bn input)))
@@ -26,6 +34,11 @@ let fails_bn name input =
 let fails_lb name input =
   Alcotest.test_case name `Quick (fun () ->
       Alcotest.check opt_str name None (Option.map LB.pp (parse_lb input)))
+
+let fails_bniz name input =
+  Alcotest.test_case name `Quick (fun () ->
+      Alcotest.check opt_str name None
+        (Option.map BNIsZero.pp (parse_bniz input)))
 
 let () =
   Alcotest.run "parse"
@@ -59,6 +72,27 @@ let () =
             "((\xce\xbb. \xce\xbb. 1 true) false)";
           rt_lb "abs if" "abs if var 0 then true else false"
             "\xce\xbb. if 0 then true else false";
+        ] );
+      ( "bn iszero",
+        [
+          rt_bniz "true" "true" "true";
+          rt_bniz "false" "false" "false";
+          rt_bniz "if" "if true then false else true"
+            "if true then false else true";
+          rt_bniz "nested if"
+            "if true then if false then true else false else true"
+            "if true then if false then true else false else true";
+          rt_bniz "zero" "zero" "0";
+          rt_bniz "succ zero" "succ zero" "succ(0)";
+          rt_bniz "pred zero" "pred zero" "pred(0)";
+          rt_bniz "succ succ" "succ succ zero" "succ(succ(0))";
+          rt_bniz "pred succ" "pred succ zero" "pred(succ(0))";
+          rt_bniz "if nat" "if true then succ zero else zero"
+            "if true then succ(0) else 0";
+          rt_bniz "iszero" "iszero zero" "iszero(0)";
+          rt_bniz "iszero2" "iszero succ zero" "iszero(succ(0))";
+          rt_bniz "iszero3" "iszero succ if true then zero else succ zero"
+            "iszero(succ(if true then 0 else succ(0)))";
         ] );
       ( "errors",
         [
