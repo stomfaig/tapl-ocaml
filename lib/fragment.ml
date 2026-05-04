@@ -48,6 +48,16 @@ module type FRAGMENT = sig
       ['a]. *)
 end
 
+(** Empty fragment as the identity building block for building fragments *)
+module EmptyFragment : FRAGMENT = struct
+  type 'a node = |
+
+  let eval ~inject:_ ~project:_ ~full_eval:_ ~full_map:_ _ = assert false
+  let parse ~inject:_ ~p:_ ~full_parser:_ = None
+  let pp ~full_pp:_ _ = assert false
+  let fmap ~f:_ _ = assert false
+end
+
 (** A fragment that additionally provides a type-checking function. Extends
     {!FRAGMENT} with a type representation ['b ty] and a [get_type] that assigns
     types to terms in the open-recursive style. *)
@@ -113,14 +123,13 @@ module UntiedCombine (F1 : FRAGMENT) (F2 : FRAGMENT) = struct
     | R f2_node ->
         F2.eval ~inject:inject_r ~project:project_r ~full_eval ~full_map f2_node
 
-  let rec parse ~inject ~p ~full_parser =
+  let parse ~inject ~p ~full_parser =
     let inject_l n = inject (local_inject_l n) in
     let inject_r n = inject (local_inject_r n) in
-    let local_full_parser p = parse ~inject ~p ~full_parser in
-    match F1.parse ~inject:inject_l ~p ~full_parser:local_full_parser with
+    match F1.parse ~inject:inject_l ~p ~full_parser with
     | Some _ as term -> term
     | None -> (
-        match F2.parse ~inject:inject_r ~p ~full_parser:local_full_parser with
+        match F2.parse ~inject:inject_r ~p ~full_parser with
         | Some _ as term -> term
         | _ -> None)
 
@@ -137,6 +146,18 @@ end
 
 (** Seal any module satisfying {!LANGUAGE} behind the abstract interface. *)
 module Seal (L : LANGUAGE) : LANGUAGE = L
+
+(** Tie the recursive knot on a single fragment, producing a closed language. *)
+module Tie (F : FRAGMENT) : LANGUAGE = struct
+  type term = In of term F.node
+
+  let inject t = In t
+  let project (In t) = Some t
+  let rec parse p = F.parse ~inject ~p ~full_parser:parse
+  let full_map f (In t) = In (F.fmap ~f t)
+  let rec eval (In t) = F.eval ~inject ~project ~full_eval:eval ~full_map t
+  let rec pp (In t) = F.pp ~full_pp:pp t
+end
 
 (** Combine two fragments into a single language.
 
