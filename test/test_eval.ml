@@ -60,6 +60,25 @@ let check_bniz name input expected =
   Alcotest.test_case name `Quick (fun () ->
       Alcotest.check bniz_term name expected (BNIsZero.eval (bniz input)))
 
+(* Tie + UntiedCombine: Bool at the outer level, so FnFragment must cross the
+   fragment boundary when parsing sub-terms like `if`. *)
+module TieFnNatBool =
+  Fragment.Tie
+    (Fragment.UntiedCombine
+       (Fragment.UntiedCombine
+          (Fn_fragment.FnFragment)
+          (Nat_fragment.NatFragment))
+          (Bool_fragment.BoolFragment))
+
+let tie s =
+  match TieFnNatBool.parse (Input.from_string s) with
+  | Some t -> TieFnNatBool.pp (TieFnNatBool.eval t)
+  | None -> Alcotest.failf "parse error: %s" s
+
+let check_tie name input expected =
+  Alcotest.test_case name `Quick (fun () ->
+      Alcotest.check Alcotest.string name expected (tie input))
+
 let () =
   Alcotest.run "eval"
     [
@@ -111,5 +130,21 @@ let () =
           Alcotest.test_case "abstraction is a value" `Quick (fun () ->
               let t = lb "abs var 0" in
               Alcotest.check lb_term "abs var 0" t (LB.eval t));
+        ] );
+      ( "tie",
+        [
+          check_tie "identity" "app abs var 0 true" "true";
+          check_tie "constant" "app abs true false" "true";
+          check_tie "nat body" "app abs succ var 0 zero" "succ(0)";
+          check_tie "not - bool body across fragment boundary"
+            "app abs if var 0 then false else true true" "false";
+          check_tie "subst through if across boundary"
+            "app abs if var 0 then true else false true" "true";
+          check_tie "K combinator" "app app abs abs var 1 true false" "true";
+          check_tie "apply not to if"
+            "app abs if var 0 then false else true if true then true else false"
+            "false";
+          check_tie "if selects fn branch"
+            "if true then app abs var 0 zero else succ zero" "0";
         ] );
     ]
