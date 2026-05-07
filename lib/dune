@@ -6,6 +6,8 @@
   bool_fragment
   nat_fragment
   bn_iszero
+  config
+  runtimeContext
   fn_fragment
   input
   context)
