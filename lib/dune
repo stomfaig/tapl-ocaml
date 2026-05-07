@@ -10,7 +10,6 @@
   runtimeContext
   fn_fragment
   input
-  context
-  debugAnnotator)
+  context)
  (ocamlopt_flags
   (:standard -w -26-27-32-33-34-37-39)))
