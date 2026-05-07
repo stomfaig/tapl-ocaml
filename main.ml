@@ -35,4 +35,6 @@ let () =
   let conf = RuntimeContext.build_context_from_config vc in
   let (module Lang : Fragment.LANGUAGE) = conf.language in
   let parsed = Lang.parse conf.input in
-  match parsed with Some result -> print_endline (Lang.pp result) | None -> ()
+  match parsed with
+  | Some result -> print_endline (Lang.pp result)
+  | None -> print_endline "Parsing failed"

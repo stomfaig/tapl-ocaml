@@ -20,16 +20,23 @@ dune build
 ### Run
 
 ```sh
-dune exec ./main.exe                           # read one line from stdin
-dune exec ./main.exe -- "app abs var 0 true"   # inline expression
-dune exec ./main.exe -- -f prog.lam            # from file
+dune exec ./main.exe -- (-fragments <f1,f2,...> | -language <name>) (-code <expr> | -f <file>)
 ```
 
-Example:
+Exactly one source (`-fragments` or `-language`) and one input (`-code` or `-f`) must be given.
 
 ```sh
-$ dune exec ./main.exe -- "app abs if var 0 then true else false true"
-true
+# Boolean conditionals
+dune exec ./main.exe -- -fragments bool -code "if true then false else true"
+
+# Natural numbers
+dune exec ./main.exe -- -fragments nat -code "pred succ succ zero"
+
+# Lambda calculus with booleans (de Bruijn indices, prefix notation)
+dune exec ./main.exe -- -fragments fn,bool -code "app abs if var 0 then false else true true"
+
+# Pre-defined language
+dune exec ./main.exe -- -language bniszero -code "iszero pred succ zero"
 ```
 
 ### Test
