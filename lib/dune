@@ -6,8 +6,11 @@
   bool_fragment
   nat_fragment
   bn_iszero
+  config
+  runtimeContext
   fn_fragment
   input
-  context)
+  context
+  debugAnnotator)
  (ocamlopt_flags
   (:standard -w -26-27-32-33-34-37-39)))
