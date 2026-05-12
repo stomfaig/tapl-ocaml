@@ -1,4 +1,5 @@
 open Fragment
+open ParseResult
 
 module NatFragment = struct
   type 'a node = Zero | Succ of 'a | Pred of 'a
@@ -15,19 +16,17 @@ module NatFragment = struct
   let parse ~inject ~p ~full_parser =
     match Input.peek_token p with
     | "zero" ->
-        ignore (Input.consume_token p);
-        Some (inject Zero)
-    | "succ" -> (
-        ignore (Input.consume_token p);
-        match full_parser p with
-        | Some t -> Some (inject (Succ t))
-        | None -> None)
-    | "pred" -> (
-        ignore (Input.consume_token p);
-        match full_parser p with
-        | Some t -> Some (inject (Pred t))
-        | None -> None)
-    | _ -> None
+        Input.swallow_token p;
+        Ok (inject Zero)
+    | "succ" ->
+        Input.swallow_token p;
+        let* t = full_parser p in
+        Ok (inject (Succ t))
+    | "pred" ->
+        Input.swallow_token p;
+        let* t = full_parser p in
+        Ok (inject (Pred t))
+    | _ -> Skip
 
   let pp ~full_pp = function
     | Zero -> "0"

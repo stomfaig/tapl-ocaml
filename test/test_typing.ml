@@ -5,8 +5,9 @@ module L =
 
 let parse s =
   match L.parse (Input.from_string s) with
-  | Some t -> t
-  | None -> Alcotest.failf "parse error: %s" s
+  | ParseResult.Ok t -> t
+  | ParseResult.Failed { msg; _ } -> Alcotest.failf "parse error: %s (%s)" s msg
+  | ParseResult.Skip -> Alcotest.failf "parse error: %s (unrecognised)" s
 
 let ty = Alcotest.(option string)
 let infer s = Option.map L.pp_ty (L.get_type (parse s))

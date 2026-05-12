@@ -1,9 +1,24 @@
 type t = { stream : string; mutable pos : int }
 
-exception InputError
-
 let is_ws = function ' ' | '\t' | '\n' -> true | _ -> false
-let from_string s = { stream = s; pos = 0 }
+
+let peek p =
+  if p.pos < String.length p.stream then Some (String.get p.stream p.pos)
+  else None
+
+let advance p = p.pos <- p.pos + 1
+
+let rec skip_ws p =
+  match peek p with
+  | Some c when is_ws c ->
+      advance p;
+      skip_ws p
+  | _ -> ()
+
+let from_string s =
+  let p = { stream = s; pos = 0 } in
+  skip_ws p;
+  p
 
 let from_file path =
   let ic = open_in path in
@@ -22,37 +37,7 @@ let from_stdin () =
    with End_of_file -> ());
   from_string (Buffer.contents buf)
 
-let peek p =
-  if p.pos < String.length p.stream then Some (String.get p.stream p.pos)
-  else None
-
-let advance p = p.pos <- p.pos + 1
-
-let expect p c =
-  match peek p with
-  | Some ch when ch = c ->
-      advance p;
-      true
-  | _ -> false
-
-let expect_str p s =
-  let saved = p.pos in
-  let ok = ref true in
-  String.iter (fun c -> if !ok then ok := expect p c) s;
-  if !ok then true
-  else (
-    p.pos <- saved;
-    false)
-
-let rec skip_ws p =
-  match peek p with
-  | Some c when is_ws c ->
-      advance p;
-      skip_ws p
-  | _ -> ()
-
-let read_token p =
-  skip_ws p;
+let consume_token p =
   let buf = Buffer.create 8 in
   let rec collect () =
     match peek p with
@@ -63,22 +48,49 @@ let read_token p =
     | _ -> ()
   in
   collect ();
+  skip_ws p;
   Buffer.contents buf
+
+let swallow_token p = ignore (consume_token p)
 
 let peek_token p =
   let saved = p.pos in
-  let tok = read_token p in
+  let tok = consume_token p in
   p.pos <- saved;
   tok
 
-let consume_token p = read_token p
+let expect_token p s =
+  let t = peek_token p in
+  if String.equal t s then (
+    swallow_token p;
+    true)
+  else false
 
 let int_token p =
-  skip_ws p;
   let saved = p.pos in
-  let tok = read_token p in
+  let tok = consume_token p in
   match int_of_string_opt tok with
   | Some _ as n -> n
   | None ->
       p.pos <- saved;
       None
+
+let pos p = p.pos
+
+let print_error p ?(pos = p.pos) ?(msg = "Unrecognised token") () =
+  print_endline ("Parsing failed on character " ^ string_of_int pos ^ ":");
+  p.pos <- pos;
+  let token_length = String.length (peek_token p) in
+  let low = max 0 (pos - 10) in
+  p.pos <- low;
+  let buf = Buffer.create 20 in
+  for _i = low to pos + token_length + 5 do
+    Buffer.add_char buf (match peek p with Some c -> c | None -> ' ');
+    advance p
+  done;
+  print_endline (Buffer.contents buf);
+  let annotation =
+    String.make (pos - low) ' ' ^ "^" ^ String.make (token_length - 1) '~'
+  in
+  print_endline annotation;
+  print_endline msg

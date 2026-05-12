@@ -36,5 +36,6 @@ let () =
   let (module Lang : Fragment.LANGUAGE) = conf.language in
   let parsed = Lang.parse conf.input in
   match parsed with
-  | Some result -> print_endline (Lang.pp result)
-  | None -> print_endline "Parsing failed"
+  | Ok result -> print_endline (Lang.pp result)
+  | Failed { pos; msg } -> Input.print_error conf.input ~pos ~msg ()
+  | Skip -> Input.print_error conf.input ()

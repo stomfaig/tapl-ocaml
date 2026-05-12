@@ -1,4 +1,5 @@
 open Fragment
+open ParseResult
 
 module BoolFragment = struct
   type 'a node = If of 'a * 'a * 'a | True | False
@@ -15,26 +16,32 @@ module BoolFragment = struct
   let parse ~inject ~p ~full_parser =
     match Input.peek_token p with
     | "true" ->
-        ignore (Input.consume_token p);
-        Some (inject True)
+        Input.swallow_token p;
+        Ok (inject True)
     | "false" ->
-        ignore (Input.consume_token p);
-        Some (inject False)
-    | "if" -> (
-        ignore (Input.consume_token p);
-        let o1 = full_parser p in
-        Input.skip_ws p;
-        if not (Input.expect_str p "then") then None
+        Input.swallow_token p;
+        Ok (inject False)
+    | "if" ->
+        Input.swallow_token p;
+        let* t1 = full_parser p in
+        if not (Input.expect_token p "then") then
+          Failed
+            {
+              pos = Input.pos p;
+              msg = "Failed parsing if block: \"then\" expected";
+            }
         else
-          let o2 = full_parser p in
-          Input.skip_ws p;
-          if not (Input.expect_str p "else") then None
+          let* t2 = full_parser p in
+          if not (Input.expect_token p "else") then
+            Failed
+              {
+                pos = Input.pos p;
+                msg = "Failed parsing if block: \"else\" expected";
+              }
           else
-            let o3 = full_parser p in
-            match (o1, o2, o3) with
-            | Some t1, Some t2, Some t3 -> Some (inject (If (t1, t2, t3)))
-            | _ -> None)
-    | _ -> None
+            let* t3 = full_parser p in
+            Ok (inject (If (t1, t2, t3)))
+    | _ -> Skip
 
   let pp ~full_pp = function
     | True -> "true"
