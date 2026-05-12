@@ -15,8 +15,10 @@ let parse_bniz s = BNIsZero.parse (Input.from_string s)
 let rt name parse pp input expected_pp =
   Alcotest.test_case name `Quick (fun () ->
       match parse input with
-      | ParseResult.Ok t -> Alcotest.check Alcotest.string name expected_pp (pp t)
-      | ParseResult.Failed { msg; _ } -> Alcotest.failf "unexpected Failed: %s" msg
+      | ParseResult.Ok t ->
+          Alcotest.check Alcotest.string name expected_pp (pp t)
+      | ParseResult.Failed { msg; _ } ->
+          Alcotest.failf "unexpected Failed: %s" msg
       | ParseResult.Skip -> Alcotest.fail "unexpected Skip")
 
 let rt_bn name = rt name parse_bn BN.pp
@@ -27,7 +29,8 @@ let parse_skips name parse input =
   Alcotest.test_case name `Quick (fun () ->
       match parse input with
       | ParseResult.Skip -> ()
-      | ParseResult.Ok _ -> Alcotest.fail "expected Skip but parsed successfully"
+      | ParseResult.Ok _ ->
+          Alcotest.fail "expected Skip but parsed successfully"
       | ParseResult.Failed { msg; _ } ->
           Alcotest.failf "expected Skip but got Failed: %s" msg)
 
@@ -35,7 +38,8 @@ let parse_fails name parse input =
   Alcotest.test_case name `Quick (fun () ->
       match parse input with
       | ParseResult.Failed _ -> ()
-      | ParseResult.Ok _ -> Alcotest.fail "expected Failed but parsed successfully"
+      | ParseResult.Ok _ ->
+          Alcotest.fail "expected Failed but parsed successfully"
       | ParseResult.Skip -> Alcotest.fail "expected Failed but got Skip")
 
 let () =
