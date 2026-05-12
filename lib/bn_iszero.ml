@@ -3,6 +3,7 @@
   "cross operation" between them, the `iszero` function *)
 
 open Fragment
+open ParseResult
 
 (* BnIsZero fragment with IsZero
 
@@ -58,14 +59,13 @@ module BnIsZero = struct
 
   let rec parse p =
     Input.skip_ws p;
-    match BN.parse ~inject:inject_bn ~p ~full_parser:parse with
-    | Some _ as v -> v
-    | None -> (
+    skip_to (BN.parse ~inject:inject_bn ~p ~full_parser:parse) (fun () ->
         match Input.peek_token p with
-        | "iszero" -> (
-            ignore (Input.consume_token p);
-            match parse p with Some t -> Some (IsZero t) | _ -> None)
-        | _ -> None)
+        | "iszero" ->
+            Input.swallow_token p;
+            let* t = parse p in
+            Ok (IsZero t)
+        | _ -> Skip)
 
   let rec pp = function
     | IsZero t -> Printf.sprintf "iszero(%s)" (pp t)

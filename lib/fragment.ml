@@ -31,8 +31,9 @@ module type FRAGMENT = sig
   val parse :
     inject:('a node -> 'a) ->
     p:Input.t ->
-    full_parser:(Input.t -> 'a option) ->
-    'a option
+    full_parser:
+      (Input.t -> ('a, ParseResult.parse_error) ParseResult.parse_results) ->
+    ('a, ParseResult.parse_error) ParseResult.parse_results
   (** Parse a term from the input stream. Must use prefix notation (op_name)
       (arg1) ..., and op_name should not prefix any other op_name in the the
       same or any other fragments that are being constructed.
@@ -53,7 +54,7 @@ module EmptyFragment : FRAGMENT = struct
   type 'a node = |
 
   let eval ~inject:_ ~project:_ ~full_eval:_ ~full_map:_ _ = assert false
-  let parse ~inject:_ ~p:_ ~full_parser:_ = None
+  let parse ~inject:_ ~p:_ ~full_parser:_ = ParseResult.Skip
   let pp ~full_pp:_ _ = assert false
   let fmap ~f:_ _ = assert false
 end
@@ -126,12 +127,8 @@ module UntiedCombine (F1 : FRAGMENT) (F2 : FRAGMENT) = struct
   let parse ~inject ~p ~full_parser =
     let inject_l n = inject (local_inject_l n) in
     let inject_r n = inject (local_inject_r n) in
-    match F1.parse ~inject:inject_l ~p ~full_parser with
-    | Some _ as term -> term
-    | None -> (
-        match F2.parse ~inject:inject_r ~p ~full_parser with
-        | Some _ as term -> term
-        | _ -> None)
+    ParseResult.skip_to (F1.parse ~inject:inject_l ~p ~full_parser) (fun () ->
+        F2.parse ~inject:inject_r ~p ~full_parser)
 
   let pp ~full_pp = function L n -> F1.pp ~full_pp n | R n -> F2.pp ~full_pp n
 end
@@ -139,7 +136,9 @@ end
 module type LANGUAGE = sig
   type term
 
-  val parse : Input.t -> term option
+  val parse :
+    Input.t -> (term, ParseResult.parse_error) ParseResult.parse_results
+
   val eval : term -> term
   val pp : term -> string
 end
@@ -193,12 +192,8 @@ module Combine (F1 : FRAGMENT) (F2 : FRAGMENT) = struct
       issues, since we assume that Each fragment uses prefix notation. *)
   let rec parse p =
     Input.skip_ws p;
-    match F1.parse ~inject:inject_l ~p ~full_parser:parse with
-    | Some _ as v -> v
-    | None -> (
-        match F2.parse ~inject:inject_r ~p ~full_parser:parse with
-        | Some _ as v -> v
-        | None -> None)
+    ParseResult.skip_to (F1.parse ~inject:inject_l ~p ~full_parser:parse)
+      (fun () -> F2.parse ~inject:inject_r ~p ~full_parser:parse)
 
   (** Pretty-print a combined term. *)
   let rec pp = function

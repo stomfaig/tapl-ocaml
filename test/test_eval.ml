@@ -15,8 +15,9 @@ let bn_term = term BN.pp
 
 let bn s =
   match BN.parse (Input.from_string s) with
-  | Some t -> t
-  | None -> Alcotest.failf "parse error: %s" s
+  | ParseResult.Ok t -> t
+  | ParseResult.Failed { msg; _ } -> Alcotest.failf "parse error: %s (%s)" s msg
+  | ParseResult.Skip -> Alcotest.failf "parse error: %s (unrecognised)" s
 
 let tt = BN.L Bool_fragment.BoolFragment.True
 let ff = BN.L Bool_fragment.BoolFragment.False
@@ -33,8 +34,9 @@ let lb_term = term LB.pp
 
 let lb s =
   match LB.parse (Input.from_string s) with
-  | Some t -> t
-  | None -> Alcotest.failf "parse error: %s" s
+  | ParseResult.Ok t -> t
+  | ParseResult.Failed { msg; _ } -> Alcotest.failf "parse error: %s (%s)" s msg
+  | ParseResult.Skip -> Alcotest.failf "parse error: %s (unrecognised)" s
 
 let ltt = LB.L Bool_fragment.BoolFragment.True
 let lff = LB.L Bool_fragment.BoolFragment.False
@@ -47,8 +49,9 @@ let bniz_term = term BNIsZero.pp
 
 let bniz s =
   match BNIsZero.parse (Input.from_string s) with
-  | Some t -> t
-  | None -> Alcotest.failf "parse error: %s" s
+  | ParseResult.Ok t -> t
+  | ParseResult.Failed { msg; _ } -> Alcotest.failf "parse error: %s (%s)" s msg
+  | ParseResult.Skip -> Alcotest.failf "parse error: %s (unrecognised)" s
 
 let bnizz = BNIsZero.BN.L Nat_fragment.NatFragment.Zero
 let bnizs n = BNIsZero.BN.L (Nat_fragment.NatFragment.Succ n)
@@ -72,8 +75,9 @@ module TieFnNatBool =
 
 let tie s =
   match TieFnNatBool.parse (Input.from_string s) with
-  | Some t -> TieFnNatBool.pp (TieFnNatBool.eval t)
-  | None -> Alcotest.failf "parse error: %s" s
+  | ParseResult.Ok t -> TieFnNatBool.pp (TieFnNatBool.eval t)
+  | ParseResult.Failed { msg; _ } -> Alcotest.failf "parse error: %s (%s)" s msg
+  | ParseResult.Skip -> Alcotest.failf "parse error: %s (unrecognised)" s
 
 let check_tie name input expected =
   Alcotest.test_case name `Quick (fun () ->

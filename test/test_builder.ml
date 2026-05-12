@@ -2,8 +2,8 @@ let opt_str = Alcotest.(option string)
 
 let eval_pp (module L : Fragment.LANGUAGE) input =
   match L.parse (Input.from_string input) with
-  | Some t -> Some (L.pp (L.eval t))
-  | None -> None
+  | ParseResult.Ok t -> Some (L.pp (L.eval t))
+  | _ -> None
 
 let check name frags input expected =
   Alcotest.test_case name `Quick (fun () ->

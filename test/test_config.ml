@@ -8,8 +8,8 @@ let make ?fragment ?language ?filename ?code () =
 
 let eval_pp (module L : Fragment.LANGUAGE) input =
   match L.parse (Input.from_string input) with
-  | Some t -> Some (L.pp (L.eval t))
-  | None -> None
+  | ParseResult.Ok t -> Some (L.pp (L.eval t))
+  | _ -> None
 
 (* validate_config *)
 

@@ -1,4 +1,5 @@
 open Fragment
+open ParseResult
 
 module FnFragment : FRAGMENT = struct
   type 'a node = Var of int | Abstraction of 'a | Application of 'a * 'a
@@ -23,25 +24,23 @@ module FnFragment : FRAGMENT = struct
 
   let parse ~inject ~p ~full_parser =
     match Input.peek_token p with
-    | "abs" -> (
-        ignore (Input.consume_token p);
-        match full_parser p with
-        | Some t -> Some (inject (Abstraction t))
-        | None -> None)
-    | "app" -> (
-        ignore (Input.consume_token p);
-        let o1 = full_parser p in
+    | "abs" ->
+        Input.swallow_token p;
+        let* t = full_parser p in
+        Ok (inject (Abstraction t))
+    | "app" ->
+        Input.swallow_token p;
+        let* t1 = full_parser p in
         Input.skip_ws p;
-        let o2 = full_parser p in
-        match (o1, o2) with
-        | Some t1, Some t2 -> Some (inject (Application (t1, t2)))
-        | _ -> None)
+        let* t2 = full_parser p in
+        Ok (inject (Application (t1, t2)))
     | "var" -> (
-        ignore (Input.consume_token p);
+        Input.swallow_token p;
         match Input.int_token p with
-        | Some i -> Some (inject (Var i))
-        | None -> None)
-    | _ -> None
+        | Some i -> Ok (inject (Var i))
+        | None -> Failed { pos = Input.pos p; msg = "Variable number expected" }
+        )
+    | _ -> Skip
 
   let pp ~full_pp = function
     | Var i -> string_of_int i

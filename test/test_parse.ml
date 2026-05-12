@@ -1,3 +1,5 @@
+open ParseResult
+
 module BN =
   Fragment.Combine (Bool_fragment.BoolFragment) (Nat_fragment.NatFragment)
 
@@ -9,36 +11,32 @@ module BNIsZero = Bn_iszero.BnIsZero
 let parse_bn s = BN.parse (Input.from_string s)
 let parse_lb s = LB.parse (Input.from_string s)
 let parse_bniz s = BNIsZero.parse (Input.from_string s)
-let opt_str = Alcotest.(option string)
 
-(* Round-trip: parse then pp *)
-let rt_bn name input expected_pp =
+let rt name parse pp input expected_pp =
   Alcotest.test_case name `Quick (fun () ->
-      let result = Option.map BN.pp (parse_bn input) in
-      Alcotest.check opt_str name (Some expected_pp) result)
+      match parse input with
+      | ParseResult.Ok t -> Alcotest.check Alcotest.string name expected_pp (pp t)
+      | ParseResult.Failed { msg; _ } -> Alcotest.failf "unexpected Failed: %s" msg
+      | ParseResult.Skip -> Alcotest.fail "unexpected Skip")
 
-let rt_lb name input expected_pp =
-  Alcotest.test_case name `Quick (fun () ->
-      let result = Option.map LB.pp (parse_lb input) in
-      Alcotest.check opt_str name (Some expected_pp) result)
+let rt_bn name = rt name parse_bn BN.pp
+let rt_lb name = rt name parse_lb LB.pp
+let rt_bniz name = rt name parse_bniz BNIsZero.pp
 
-let rt_bniz name input expected_pp =
+let parse_skips name parse input =
   Alcotest.test_case name `Quick (fun () ->
-      let result = Option.map BNIsZero.pp (parse_bniz input) in
-      Alcotest.check opt_str name (Some expected_pp) result)
+      match parse input with
+      | ParseResult.Skip -> ()
+      | ParseResult.Ok _ -> Alcotest.fail "expected Skip but parsed successfully"
+      | ParseResult.Failed { msg; _ } ->
+          Alcotest.failf "expected Skip but got Failed: %s" msg)
 
-let fails_bn name input =
+let parse_fails name parse input =
   Alcotest.test_case name `Quick (fun () ->
-      Alcotest.check opt_str name None (Option.map BN.pp (parse_bn input)))
-
-let fails_lb name input =
-  Alcotest.test_case name `Quick (fun () ->
-      Alcotest.check opt_str name None (Option.map LB.pp (parse_lb input)))
-
-let fails_bniz name input =
-  Alcotest.test_case name `Quick (fun () ->
-      Alcotest.check opt_str name None
-        (Option.map BNIsZero.pp (parse_bniz input)))
+      match parse input with
+      | ParseResult.Failed _ -> ()
+      | ParseResult.Ok _ -> Alcotest.fail "expected Failed but parsed successfully"
+      | ParseResult.Skip -> Alcotest.fail "expected Failed but got Skip")
 
 let () =
   Alcotest.run "parse"
@@ -96,11 +94,11 @@ let () =
         ] );
       ( "errors",
         [
-          fails_bn "empty" "";
-          fails_bn "unknown token" "blah";
-          fails_bn "incomplete succ" "succ";
-          fails_bn "incomplete if" "if true";
-          fails_lb "incomplete app" "app abs var 0";
-          fails_lb "var no index" "var";
+          parse_skips "empty" parse_bn "";
+          parse_skips "unknown token" parse_bn "blah";
+          parse_skips "incomplete succ" parse_bn "succ";
+          parse_fails "incomplete if" parse_bn "if true";
+          parse_skips "incomplete app" parse_lb "app abs var 0";
+          parse_fails "var no index" parse_lb "var";
         ] );
     ]
