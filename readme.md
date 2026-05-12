@@ -25,6 +25,8 @@ dune exec ./main.exe -- (-fragments <f1,f2,...> | -language <name>) (-code <expr
 
 Exactly one source (`-fragments` or `-language`) and one input (`-code` or `-f`) must be given.
 
+Note that the code passed to the interpreter must be follow [Polish notation](https://en.wikipedia.org/wiki/Polish_notation): each operator precedes its arguments, with arity fixed per operator. This makes parsing really easy. Since we assume that major-keywords are prefix-free, we can also parse the code eagerly. 
+
 ```sh
 # Boolean conditionals
 dune exec ./main.exe -- -fragments bool -code "if true then false else true"
