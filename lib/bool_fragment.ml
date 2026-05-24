@@ -1,4 +1,4 @@
-open Fragment
+open TypedFragment
 open ParseResult
 
 module BoolFragment = struct
@@ -60,14 +60,13 @@ module TypedBoolFragment : TYPED_FRAGMENT = struct
 
   type 'b ty = Bool
 
-  let get_type ~ctx:_ ~project ~inject ~full_get_type = function
+  let get_type ~ctx ~project ~inject ~full_get_type = function
     | True | False -> Some (inject Bool)
-    | If (t1, t2, t3) -> (
-        match project (full_get_type t1) with
-        | Some Bool ->
-            let t2_ty = full_get_type t2 in
-            if t2_ty = full_get_type t3 then Some t2_ty else None
-        | _ -> None)
+    | If (t1, t2, t3) ->
+        Option.bind (full_get_type ctx t1) (fun ty ->
+            Option.bind (project ty) (function Bool ->
+                let t2_ty = full_get_type ctx t2 in
+                if t2_ty = full_get_type ctx t3 then t2_ty else None))
 
-  let pp_ty Bool = "Bool"
+  let pp_ty ~full_pp:_ Bool = "Bool"
 end

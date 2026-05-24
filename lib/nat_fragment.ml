@@ -1,4 +1,4 @@
-open Fragment
+open TypedFragment
 open ParseResult
 
 module NatFragment = struct
@@ -44,16 +44,14 @@ module TypedNatFragment : TYPED_FRAGMENT = struct
 
   type 'b ty = Nat
 
-  let get_type ~ctx:_ ~project ~inject ~full_get_type = function
+  let get_type ~ctx ~project ~inject ~full_get_type = function
     | Zero -> Some (inject Nat)
-    | Succ t -> (
-        match project (full_get_type t) with
-        | Some Nat -> Some (inject Nat)
-        | _ -> None)
-    | Pred t -> (
-        match project (full_get_type t) with
-        | Some Nat -> Some (inject Nat)
-        | _ -> None)
+    | Succ t ->
+        Option.bind (full_get_type ctx t) (fun ty ->
+            Option.bind (project ty) (function Nat -> Some (inject Nat)))
+    | Pred t ->
+        Option.bind (full_get_type ctx t) (fun ty ->
+            Option.bind (project ty) (function Nat -> Some (inject Nat)))
 
-  let pp_ty Nat = "Nat"
+  let pp_ty ~full_pp:_ Nat = "Nat"
 end

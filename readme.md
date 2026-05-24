@@ -6,7 +6,7 @@ Languages are built by composing independent fragments, each contributing a set 
 
 This promotes the fact that different language fragments can be highly independent, and that their implementations should not depend on each other. This also allows greater flexibility in building languages with properties more easily, than reimplementing a complete closed system every time with huge match cases, and complex evaluation logic.
 
-For now only simple fragments are to be supported (e.g. lambda calculus, nat, bool), soon with typed versions too (see `TYPED_FRAGMENT` and the in progress `context`)
+Typed fragments extend this with a type system: each fragment also contributes a `get_type` function, and `TypedUntiedCombine` / `TypedTie` wire them into a closed type checker in the same open-recursive style.
 
 ## How tos
 
@@ -39,6 +39,46 @@ dune exec ./main.exe -- -fragments fn,bool -code "app abs if var 0 then false el
 
 # Pre-defined language
 dune exec ./main.exe -- -language bniszero -code "iszero pred succ zero"
+```
+
+### Type checking
+
+Typed fragments can be assembled with `TypedUntiedCombine` and closed with `TypedTie`:
+
+```ocaml
+module L =
+  TypedFragment.TypedTie (
+    TypedFragment.TypedUntiedCombine (
+      TypedFragment.TypedUntiedCombine (
+        Nat_fragment.TypedNatFragment) (
+        Bool_fragment.TypedBoolFragment)) (
+      Fn_fragment.TyFnFragment))
+
+let () =
+  let t = ... (* parse a term *) in
+  match L.get_type t with
+  | Some ty -> Printf.printf "type: %s\n" (L.pp_ty ty)
+  | None    -> Printf.printf "ill-typed\n"
+```
+
+`TyFnFragment` uses **type witnesses**: the annotation on an abstraction is a
+term whose *type* names the argument type. Write `true` to mean Bool, `zero` to
+mean Nat, and `abs true var 0` to mean `Bool -> Bool`.
+
+```
+abs true var 0           (* λ(x:Bool). x  :  Bool -> Bool *)
+abs zero var 0           (* λ(x:Nat).  x  :  Nat  -> Nat  *)
+abs abs true var 0       (* λ(f:Bool→Bool). …  *)
+    app var 0 true       (*   f true  :  (Bool -> Bool) -> Bool *)
+```
+
+Types are printed in standard arrow notation with left-associative parentheses:
+
+```
+Bool -> Bool
+Nat  -> Nat
+(Bool -> Bool) -> Bool
+(Bool -> Bool) -> Bool -> Bool
 ```
 
 ### Test
