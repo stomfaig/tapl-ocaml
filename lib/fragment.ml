@@ -127,7 +127,10 @@ module Tie (F : FRAGMENT) = struct
 
   let inject t = In t
   let project (In t) = Some t
-  let rec parse p = F.parse ~inject ~p ~full_parser:parse
+
+  let rec parse p =
+    Input.parse_parend ~f:(fun t -> F.parse ~inject ~p:t ~full_parser:parse) p
+
   let full_map f (In t) = In (F.fmap ~f t)
   let rec eval (In t) = F.eval ~inject ~project ~full_eval:eval ~full_map t
   let rec pp (In t) = F.pp ~full_pp:pp t
@@ -167,8 +170,11 @@ module Combine (F1 : FRAGMENT) (F2 : FRAGMENT) = struct
       issues, since we assume that Each fragment uses prefix notation. *)
   let rec parse p =
     Input.skip_ws p;
-    ParseResult.skip_to (F1.parse ~inject:inject_l ~p ~full_parser:parse)
-      (fun () -> F2.parse ~inject:inject_r ~p ~full_parser:parse)
+    Input.parse_parend
+      ~f:(fun t ->
+        ParseResult.skip_to (F1.parse ~inject:inject_l ~p:t ~full_parser:parse)
+          (fun () -> F2.parse ~inject:inject_r ~p:t ~full_parser:parse))
+      p
 
   (** Pretty-print a combined term. *)
   let rec pp = function

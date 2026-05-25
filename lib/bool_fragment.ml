@@ -1,5 +1,6 @@
 open TypedFragment
 open ParseResult
+open TypingState
 
 module BoolFragment = struct
   type 'a node = If of 'a * 'a * 'a | True | False
@@ -60,7 +61,7 @@ module TypedBoolFragment : TYPED_FRAGMENT = struct
 
   type 'b ty = Bool
 
-  let get_type ~ctx ~project ~inject ~full_get_type = function
+  let get_type ~ctx ~project ~inject ~full_get_type ~annot:_ = function
     | True | False -> Some (inject Bool)
     | If (t1, t2, t3) ->
         Option.bind (full_get_type ctx t1) (fun ty ->
@@ -69,4 +70,11 @@ module TypedBoolFragment : TYPED_FRAGMENT = struct
                 if t2_ty = full_get_type ctx t3 then t2_ty else None))
 
   let pp_ty ~full_pp:_ Bool = "Bool"
+
+  let parse_ty ~p ~full_parse_ty:_ =
+    match Input.peek_token p with
+    | "Bool" ->
+        Input.swallow_token p;
+        Annotated Bool
+    | _ -> Error
 end

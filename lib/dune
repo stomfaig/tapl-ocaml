@@ -12,6 +12,7 @@
   input
   context
   parseResult
-  typedFragment)
+  typedFragment
+  typingState)
  (ocamlopt_flags
   (:standard -w -26-27-32-33-34-37-39)))

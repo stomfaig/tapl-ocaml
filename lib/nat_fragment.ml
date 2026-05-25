@@ -1,5 +1,6 @@
 open TypedFragment
 open ParseResult
+open TypingState
 
 module NatFragment = struct
   type 'a node = Zero | Succ of 'a | Pred of 'a
@@ -44,7 +45,7 @@ module TypedNatFragment : TYPED_FRAGMENT = struct
 
   type 'b ty = Nat
 
-  let get_type ~ctx ~project ~inject ~full_get_type = function
+  let get_type ~ctx ~project ~inject ~full_get_type ~annot:_ = function
     | Zero -> Some (inject Nat)
     | Succ t ->
         Option.bind (full_get_type ctx t) (fun ty ->
@@ -54,4 +55,11 @@ module TypedNatFragment : TYPED_FRAGMENT = struct
             Option.bind (project ty) (function Nat -> Some (inject Nat)))
 
   let pp_ty ~full_pp:_ Nat = "Nat"
+
+  let parse_ty ~p ~full_parse_ty:_ =
+    match Input.peek_token p with
+    | "Nat" ->
+        Input.swallow_token p;
+        Annotated Nat
+    | _ -> Error
 end

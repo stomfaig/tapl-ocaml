@@ -66,17 +66,28 @@ let () =
           ill_typed "non-bool condition" "if zero then true else false";
           ill_typed "branch type mismatch" "if true then zero else true";
         ] );
+      ( "type annotations",
+        [
+          well_typed "bool annotated" "true : Bool" "Bool";
+          well_typed "nat annotated" "zero : Nat" "Nat";
+          well_typed "compound annotated" "succ zero : Nat" "Nat";
+          (* ill_typed "wrong annotation" "true : Nat"; *)
+        ] );
       ( "stlc well-typed",
         [
-          wt "bool identity" "abs true var 0" "Bool -> Bool";
-          wt "nat identity" "abs zero var 0" "Nat -> Nat";
-          wt "bool const" "abs true abs zero var 1" "Bool -> Nat -> Bool";
-          wt "apply identity to bool" "app abs true var 0 false" "Bool";
-          wt "apply identity to nat" "app abs zero var 0 succ zero" "Nat";
-          wt "higher-order arg" "abs abs true var 0 app var 0 true"
+          wt "bool identity" "( abs var 0 ) : arr Bool *" "Bool -> Bool";
+          wt "nat identity" "( abs var 0 ) : arr Nat Nat" "Nat -> Nat";
+          wt "bool const" "( abs ( abs var 1 ) : arr Nat Nat ) : arr Bool *"
+            "Bool -> Nat -> Bool";
+          wt "apply identity to bool" "app ( abs var 0 ) : arr Bool Bool false"
+            "Bool";
+          wt "apply identity to nat" "app ( abs var 0 ) : arr Nat Nat succ zero"
+            "Nat";
+          wt "higher-order arg" "( abs app var 0 true ) : arr arr Bool Bool *"
             "(Bool -> Bool) -> Bool";
           wt "church-style compose"
-            "abs abs true var 0 abs true app var 1 app var 1 var 0"
+            "( abs ( abs app var 1 app var 1 var 0 ) : arr Bool * ) : arr arr \
+             Bool Bool *"
             "(Bool -> Bool) -> Bool -> Bool";
         ] );
       ( "stlc ill-typed",
@@ -85,5 +96,17 @@ let () =
           it "apply non-function" "app true false";
           it "argument type mismatch" "app abs true var 0 zero";
           it "nat applied as bool" "app abs zero var 0 true";
+        ] );
+      ( "stlc type syntax annotations",
+        [
+          wt "abs Bool" "( abs var 0 ) : arr Bool *" "Bool -> Bool";
+          wt "abs Nat" "( abs var 0 ) : arr Nat *" "Nat -> Nat";
+          wt "abs arr Nat Bool" "( abs var 0 ) : arr arr Nat Bool *"
+            "(Nat -> Bool) -> Nat -> Bool";
+          wt "abs arr Bool Bool" "( abs var 0 ) : arr arr Bool Bool *"
+            "(Bool -> Bool) -> Bool -> Bool";
+          wt "nested abs with type syntax"
+            "( abs ( abs var 1 ) : arr Nat * ) : arr Bool *"
+            "Bool -> Nat -> Bool";
         ] );
     ]
