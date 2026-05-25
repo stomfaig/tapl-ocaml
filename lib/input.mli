@@ -34,3 +34,5 @@ val print_error : t -> ?pos:int -> ?msg:string -> unit -> unit
 
 val skip_ws : t -> unit
 (** Skip to next non-ws character *)
+
+val parse_parend : f:(t -> 'a) -> t -> 'a

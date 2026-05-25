@@ -1,5 +1,7 @@
 type t = { stream : string; mutable pos : int }
 
+exception UnclosedParen
+
 let is_ws = function ' ' | '\t' | '\n' -> true | _ -> false
 
 let peek p =
@@ -94,3 +96,12 @@ let print_error p ?(pos = p.pos) ?(msg = "Unrecognised token") () =
   in
   print_endline annotation;
   print_endline msg
+
+let parse_parend ~f t =
+  if peek_token t = "(" then begin
+    swallow_token t;
+    let result = f t in
+    if not (expect_token t ")") then raise UnclosedParen;
+    result
+  end
+  else f t
